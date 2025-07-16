@@ -1,0 +1,47 @@
+package cmd
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/DePavelPo/task-manager-cli/internal/storage"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+)
+
+// doneCmd represents the done command
+var doneCmd = &cobra.Command{
+	Use:   "done [id]",
+	Short: "Mark task as done",
+	Args:  cobra.MinimumNArgs(1),
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		db := storage.OpenDB()
+		defer storage.CloseDB(db)
+
+		storage.Migrate(db)
+
+		argUint64, err := strToUint64(args[0])
+		if err != nil {
+			logrus.Errorf("cant use argument: %v", err)
+			return
+		}
+
+		err = storage.MarkTask(argUint64, true, db)
+		if err != nil {
+			logrus.Errorf("while MarkTask: %v", err)
+			return
+		}
+
+		fmt.Printf("Task %d was marked as done\n", argUint64)
+	},
+}
+
+func strToUint64(s string) (uint64, error) {
+	uint64Value, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64Value, nil
+}

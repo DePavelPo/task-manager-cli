@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/DePavelPo/task-manager-cli/models"
 	_ "github.com/mattn/go-sqlite3"
@@ -49,10 +50,15 @@ func InsertTask(title string, db *sql.DB) error {
 	return nil
 }
 
-func SelectTasks(db *sql.DB) ([]models.Task, error) {
+func SelectTasks(completed *bool, db *sql.DB) ([]models.Task, error) {
 	query := `
-		select id, title, completed, created_at from task;
+		select id, title, completed, created_at from task
 	`
+
+	if completed != nil {
+		completedInt := boolToInt(*completed)
+		query += fmt.Sprint(" where completed =", completedInt)
+	}
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -80,19 +86,39 @@ func SelectTasks(db *sql.DB) ([]models.Task, error) {
 	return tasks, nil
 }
 
-func intToBool(i int) bool {
-	return i != 0
-}
-
 func MarkTask(id uint64, completed bool, db *sql.DB) error {
 	query := `
 		update task set completed = ?
 			where id = ?;
 	`
 
-	if _, err := db.Exec(query, &id, &completed); err != nil {
+	completedInt := boolToInt(completed)
+	if _, err := db.Exec(query, &completedInt, &id); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func DeleteTask(id uint64, db *sql.DB) error {
+	query := `
+		delete from task where id = ?;
+	`
+
+	if _, err := db.Exec(query, &id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func intToBool(i int) bool {
+	return i != 0
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
