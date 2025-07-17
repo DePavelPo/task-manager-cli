@@ -15,10 +15,11 @@ var deleteCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		db := storage.OpenDB()
-		defer storage.CloseDB(db)
-
-		storage.Migrate(db)
+		store, err := storage.NewSQLiteStore("./task-manager.db")
+		if err != nil {
+			logrus.Fatalf("init sqlite3 store error: %v", err)
+		}
+		defer store.CloseDB()
 
 		argUint64, err := strToUint64(args[0])
 		if err != nil {
@@ -26,7 +27,7 @@ var deleteCmd = &cobra.Command{
 			return
 		}
 
-		err = storage.DeleteTask(argUint64, db)
+		err = store.DeleteTask(argUint64)
 		if err != nil {
 			logrus.Errorf("while DeleteTask: %v", err)
 			return

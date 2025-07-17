@@ -16,10 +16,11 @@ var doneCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		db := storage.OpenDB()
-		defer storage.CloseDB(db)
-
-		storage.Migrate(db)
+		store, err := storage.NewSQLiteStore("./task-manager.db")
+		if err != nil {
+			logrus.Fatalf("init sqlite3 store error: %v", err)
+		}
+		defer store.CloseDB()
 
 		argUint64, err := strToUint64(args[0])
 		if err != nil {
@@ -27,9 +28,9 @@ var doneCmd = &cobra.Command{
 			return
 		}
 
-		err = storage.MarkTask(argUint64, true, db)
+		err = store.UpdateTask(argUint64, true)
 		if err != nil {
-			logrus.Errorf("while MarkTask: %v", err)
+			logrus.Errorf("while UpdateTask: %v", err)
 			return
 		}
 

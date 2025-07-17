@@ -1,115 +1,15 @@
 package storage
 
 import (
-	"database/sql"
-	"fmt"
-
 	"github.com/DePavelPo/task-manager-cli/models"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/sirupsen/logrus"
 )
 
-func OpenDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "./task-manager.db")
-	if err != nil {
-		logrus.Fatalf("open sqlite3 db error: %v", err)
-	}
-
-	return db
-}
-
-func CloseDB(db *sql.DB) {
-	db.Close()
-}
-
-func Migrate(db *sql.DB) {
-	query := `
-		create table if not exists task
-		(
-			id integer primary key autoincrement,
-			title text not null,
-			completed integer not null default 0,
-			created_at datetime not null default CURRENT_TIMESTAMP
-		);
-	`
-
-	if _, err := db.Exec(query); err != nil {
-		logrus.Fatalf("migrate sqlite3 db error: %v", err)
-	}
-}
-
-func InsertTask(title string, db *sql.DB) error {
-	query := `
-		insert into task(title) values (?);
-	`
-
-	if _, err := db.Exec(query, title); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func SelectTasks(completed *bool, db *sql.DB) ([]models.Task, error) {
-	query := `
-		select id, title, completed, created_at from task
-	`
-
-	if completed != nil {
-		completedInt := boolToInt(*completed)
-		query += fmt.Sprint(" where completed =", completedInt)
-	}
-
-	rows, err := db.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	tasks := make([]models.Task, 0)
-	for rows.Next() {
-		var task models.Task
-		var completedInt int
-		err := rows.Scan(&task.ID, &task.Title, &completedInt, &task.CreatedAt)
-		if err != nil {
-			return nil, err
-		}
-
-		task.Completed = intToBool(completedInt)
-		tasks = append(tasks, task)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return tasks, nil
-}
-
-func MarkTask(id uint64, completed bool, db *sql.DB) error {
-	query := `
-		update task set completed = ?
-			where id = ?;
-	`
-
-	completedInt := boolToInt(completed)
-	if _, err := db.Exec(query, &completedInt, &id); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func DeleteTask(id uint64, db *sql.DB) error {
-	query := `
-		delete from task where id = ?;
-	`
-
-	if _, err := db.Exec(query, &id); err != nil {
-		return err
-	}
-
-	return nil
+type Storage interface {
+	LoadTasks(completed *bool) ([]models.Task, error)
+	SaveTask(title string) error
+	UpdateTask(id uint64, completed bool) error
+	DeleteTask(id uint64) error
 }
 
 func intToBool(i int) bool {

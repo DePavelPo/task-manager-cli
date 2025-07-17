@@ -16,14 +16,15 @@ var addCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		db := storage.OpenDB()
-		defer storage.CloseDB(db)
-
-		storage.Migrate(db)
-
-		err := storage.InsertTask(args[0], db)
+		store, err := storage.NewSQLiteStore("./task-manager.db")
 		if err != nil {
-			logrus.Errorf("while InsertTask: %v", err)
+			logrus.Fatalf("init sqlite3 store error: %v", err)
+		}
+		defer store.CloseDB()
+
+		err = store.SaveTask(args[0])
+		if err != nil {
+			logrus.Errorf("while SaveTask: %v", err)
 			return
 		}
 
