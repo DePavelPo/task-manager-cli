@@ -14,12 +14,12 @@ type SQLiteStore struct {
 func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	store := &SQLiteStore{db: db}
 	if err := store.migrate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 
 	return store, nil
@@ -46,7 +46,7 @@ func (s *SQLiteStore) migrate() error {
 
 func (s *SQLiteStore) SaveTask(title string) error {
 	query := `
-		insert into task(title) values (?);
+		INSERT INTO task(title) VALUES (?);
 	`
 
 	_, err := s.db.Exec(query, title)
@@ -54,34 +54,38 @@ func (s *SQLiteStore) SaveTask(title string) error {
 }
 
 func (s *SQLiteStore) LoadTasks(completed *bool) ([]models.Task, error) {
-	query := `SELECT id, title, completed, created_at FROM task`
+	baseQuery := `SELECT id, title, completed, created_at FROM task`
+	var (
+		query string
+		args  []any
+	)
 
 	if completed != nil {
-		completedInt := boolToInt(*completed)
-		query += fmt.Sprint(" where completed =", completedInt)
+		query = baseQuery + " WHERE completed = ?"
+		args = append(args, boolToInt(*completed))
+	} else {
+		query = baseQuery
 	}
 
-	rows, err := s.db.Query(query)
+	rows, err := s.db.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query tasks: %w", err)
 	}
 	defer rows.Close()
 
-	tasks := make([]models.Task, 0)
+	tasks := make([]models.Task, 0, 16)
 	for rows.Next() {
 		var task models.Task
 		var completedInt int
-		err := rows.Scan(&task.ID, &task.Title, &completedInt, &task.CreatedAt)
-		if err != nil {
-			return nil, err
+		if err := rows.Scan(&task.ID, &task.Title, &completedInt, &task.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan task row: %w", err)
 		}
-
 		task.Completed = intToBool(completedInt)
 		tasks = append(tasks, task)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("row iteration error: %w", err)
 	}
 
 	return tasks, nil
@@ -89,18 +93,18 @@ func (s *SQLiteStore) LoadTasks(completed *bool) ([]models.Task, error) {
 
 func (s *SQLiteStore) UpdateTask(id uint64, completed bool) error {
 	query := `
-		update task set completed = ?
-			where id = ?;
+		UPDATE task SET completed = ?
+		WHERE id = ?;
 	`
 
 	completedInt := boolToInt(completed)
-	_, err := s.db.Exec(query, &completedInt, &id)
+	_, err := s.db.Exec(query, completedInt, id)
 	return err
 }
 
 func (s *SQLiteStore) DeleteTask(id uint64) error {
-	query := `delete from task where id = ?;`
+	query := `DELETE FROM task WHERE id = ?;`
 
-	_, err := s.db.Exec(query, &id)
+	_, err := s.db.Exec(query, id)
 	return err
 }
