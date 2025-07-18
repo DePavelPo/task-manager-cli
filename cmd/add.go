@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/DePavelPo/task-manager-cli/internal/storage"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	"github.com/DePavelPo/task-manager-cli/internal/storage"
 )
 
 // addCmd represents the add command
@@ -18,13 +18,13 @@ var addCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		store, err := storage.NewSQLiteStore("./task-manager.db")
 		if err != nil {
-			logrus.Fatalf("init sqlite3 store error: %v", err)
+			logrus.WithError(err).Fatal("init sqlite3 store error")
 		}
 		defer store.CloseDB()
 
 		err = store.SaveTask(args[0])
 		if err != nil {
-			logrus.Errorf("while SaveTask: %v", err)
+			logrus.WithError(err).Error("while SaveTask")
 			return
 		}
 

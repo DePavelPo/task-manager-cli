@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/DePavelPo/task-manager-cli/internal/storage"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -18,19 +19,19 @@ var doneCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		store, err := storage.NewSQLiteStore("./task-manager.db")
 		if err != nil {
-			logrus.Fatalf("init sqlite3 store error: %v", err)
+			logrus.WithError(err).Fatal("init sqlite3 store error")
 		}
 		defer store.CloseDB()
 
 		argUint64, err := strToUint64(args[0])
 		if err != nil {
-			logrus.Errorf("cant use argument: %v", err)
+			logrus.WithError(err).Error("cant use argument")
 			return
 		}
 
 		err = store.UpdateTask(argUint64, true)
 		if err != nil {
-			logrus.Errorf("while UpdateTask: %v", err)
+			logrus.WithError(err).Error("while UpdateTask")
 			return
 		}
 
@@ -43,6 +44,5 @@ func strToUint64(s string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-
 	return uint64Value, nil
 }

@@ -22,3 +22,7 @@ func boolToInt(b bool) int {
 	}
 	return 0
 }
+
+func boolPtr(b bool) *bool {
+	return &b
+}

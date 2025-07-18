@@ -17,19 +17,19 @@ var deleteCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		store, err := storage.NewSQLiteStore("./task-manager.db")
 		if err != nil {
-			logrus.Fatalf("init sqlite3 store error: %v", err)
+			logrus.WithError(err).Fatal("init sqlite3 store error")
 		}
 		defer store.CloseDB()
 
 		argUint64, err := strToUint64(args[0])
 		if err != nil {
-			logrus.Errorf("cant use argument: %v", err)
+			logrus.WithError(err).Error("cant use argument")
 			return
 		}
 
 		err = store.DeleteTask(argUint64)
 		if err != nil {
-			logrus.Errorf("while DeleteTask: %v", err)
+			logrus.WithError(err).Error("while DeleteTask")
 			return
 		}
 
