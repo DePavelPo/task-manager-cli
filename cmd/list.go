@@ -14,6 +14,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var storeFactory = func() (storage.Storage, error) {
+	store, err := storage.NewSQLiteStore("./task-manager.db")
+	return store, err
+}
+
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
@@ -26,7 +31,7 @@ var listCmd = &cobra.Command{
 			return
 		}
 
-		store, err := storage.NewSQLiteStore("./task-manager.db")
+		store, err := storeFactory()
 		if err != nil {
 			logrus.WithError(err).Fatal("init sqlite3 store error")
 		}
@@ -84,4 +89,8 @@ func responseOutput(tasks []models.Task) {
 	}
 	table.Bulk(tableData)
 	table.Render()
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }

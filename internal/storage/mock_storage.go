@@ -29,3 +29,8 @@ func (m *MockStorage) DeleteTask(id uint64) error {
 	args := m.Called(id)
 	return args.Error(0)
 }
+
+func (m *MockStorage) CloseDB() error {
+	args := m.Called()
+	return args.Error(0)
+}

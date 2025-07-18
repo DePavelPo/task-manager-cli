@@ -10,6 +10,7 @@ type Storage interface {
 	SaveTask(title string) error
 	UpdateTask(id uint64, completed bool) error
 	DeleteTask(id uint64) error
+	CloseDB() error
 }
 
 func intToBool(i int) bool {
