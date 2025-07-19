@@ -16,16 +16,19 @@ func TestList(t *testing.T) {
 		storeMockResponse []models.Task
 		storeMockError    error
 		completed         *bool
-		expectedTasks     []string
+		expectedTasks     []models.Task
 	}{
-		"one task": {
+		"two tasks": {
 			storeMockResponse: []models.Task{
-				{ID: 1, Title: "Test Task", Completed: false},
-				{ID: 2, Title: "Test Task 2", Completed: false},
+				{ID: 1, Title: "Test Task 1", Completed: false},
+				{ID: 2, Title: "Test Task 2", Completed: true},
 			},
 			storeMockError: nil,
 			completed:      nil,
-			expectedTasks:  []string{"Test Task", "Test Task 2"},
+			expectedTasks: []models.Task{
+				{Title: "Test Task 1", Completed: false},
+				{Title: "Test Task 2", Completed: true},
+			},
 		},
 		"one completed task": {
 			storeMockResponse: []models.Task{
@@ -33,7 +36,9 @@ func TestList(t *testing.T) {
 			},
 			storeMockError: nil,
 			completed:      boolPtr(true),
-			expectedTasks:  []string{"Test Task"},
+			expectedTasks: []models.Task{
+				{Title: "Test Task", Completed: true},
+			},
 		},
 		"one pending task": {
 			storeMockResponse: []models.Task{
@@ -41,7 +46,9 @@ func TestList(t *testing.T) {
 			},
 			storeMockError: nil,
 			completed:      boolPtr(false),
-			expectedTasks:  []string{"Test Task 2"},
+			expectedTasks: []models.Task{
+				{Title: "Test Task 2", Completed: false},
+			},
 		},
 	}
 
@@ -60,12 +67,14 @@ func TestList(t *testing.T) {
 			mockStore.On("CloseDB").Return(nil)
 
 			cmd := listCmd
+			cmd.Flags().Set("completed", "false")
+			cmd.Flags().Set("pending", "false")
 
 			if tc.completed != nil {
 				if *tc.completed {
-					cmd.SetArgs([]string{"completed"})
+					cmd.Flags().Set("completed", "true")
 				} else {
-					cmd.SetArgs([]string{"pending"})
+					cmd.Flags().Set("pending", "true")
 				}
 			}
 
@@ -87,24 +96,25 @@ func TestList(t *testing.T) {
 			mockStore.AssertExpectations(t)
 
 			// Get the actual calls and verify the arguments
-			// calls := mockStore.Calls
-			// if len(calls) > 0 {
-			// 	actualCompleted := calls[0].Arguments.Get(0).(*bool)
-			// 	if tc.completed == nil {
-			// 		if actualCompleted != nil {
-			// 			t.Errorf("expected nil, got %v", *actualCompleted)
-			// 		}
-			// 	} else {
-			// 		if actualCompleted == nil {
-			// 			t.Errorf("expected %v, got nil", *tc.completed)
-			// 		} else if *actualCompleted != *tc.completed {
-			// 			t.Errorf("expected %v, got %v", *tc.completed, *actualCompleted)
-			// 		}
-			// 	}
-			// }
+			calls := mockStore.Calls
+			if len(calls) > 0 {
+				actualCompleted := calls[0].Arguments.Get(0).(*bool)
+				if tc.completed == nil {
+					if actualCompleted != nil {
+						t.Errorf("expected nil, got %v", *actualCompleted)
+					}
+				} else {
+					if actualCompleted == nil {
+						t.Errorf("expected %v, got nil", *tc.completed)
+					} else if *actualCompleted != *tc.completed {
+						t.Errorf("expected %v, got %v", *tc.completed, *actualCompleted)
+					}
+				}
+			}
+			// check if the output has expected values
 			for _, expectedTask := range tc.expectedTasks {
-				if !bytes.Contains([]byte(output), []byte(expectedTask)) {
-					t.Errorf("expected task: %s, got: %s", tc.expectedTasks, output)
+				if !bytes.Contains([]byte(output), []byte(expectedTask.Title)) {
+					t.Errorf("expected task: %s, got: %s", expectedTask.Title, output)
 				}
 			}
 		})
